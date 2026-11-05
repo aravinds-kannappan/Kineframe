@@ -11,7 +11,12 @@ import {
   X,
 } from "lucide-react";
 import type { ViewControls } from "./Scene";
-import { gesture, sliderValue } from "../../shared/gestures";
+import {
+  gesture,
+  sliderValue,
+  stabilizePointer,
+  zoomRatio,
+} from "../../shared/gestures";
 function shouldWelcome() {
   try {
     return !sessionStorage.getItem("mindscope:camera-choice");
@@ -99,7 +104,7 @@ export default function Hands({
             "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
         },
         runningMode: "VIDEO",
-        numHands: 1,
+        numHands: 2,
         minHandDetectionConfidence: 0.6,
         minTrackingConfidence: 0.6,
       });
@@ -125,7 +130,9 @@ export default function Hands({
         smooth: { x: number; y: number } | null = null,
         lastClick = 0,
         lastRange = 0,
-        lastStatus = "";
+        lastStatus = "",
+        zoomDistance: number | null = null,
+        lastFrame = 0;
       const report = (text: string) => {
         if (lastStatus !== text) {
           lastStatus = text;
@@ -138,16 +145,38 @@ export default function Hands({
           if (video!.currentTime !== lastTime && now - lastDetection > 45) {
             lastDetection = now;
             lastTime = video!.currentTime;
-            const hand = tracker!.detectForVideo(video!, now).landmarks[0];
+            const detected = tracker!.detectForVideo(video!, now).landmarks;
+            const hand = detected[0];
+            if (
+              detected.length === 2 &&
+              detected.every((h) => gesture(h, true).pinch)
+            ) {
+              const distance = Math.hypot(
+                detected[0][9].x - detected[1][9].x,
+                detected[0][9].y - detected[1][9].y,
+              );
+              if (
+                zoomDistance !== null &&
+                Math.abs(distance - zoomDistance) > 0.003
+              )
+                controlsRef.current?.zoom(zoomRatio(zoomDistance, distance));
+              zoomDistance = distance;
+              previous = null;
+              wasPinching = true;
+              smooth = null;
+              if (pointer.current) pointer.current.style.display = "none";
+              report(
+                "Two-hand zoom: spread to zoom in · bring together to zoom out",
+              );
+              raf = requestAnimationFrame(loop);
+              return;
+            }
+            zoomDistance = null;
             if (hand) {
               const g = gesture(hand, wasPinching);
               const next = { x: g.x * innerWidth, y: g.y * innerHeight };
-              smooth = smooth
-                ? {
-                    x: smooth.x + (next.x - smooth.x) * 0.4,
-                    y: smooth.y + (next.y - smooth.y) * 0.4,
-                  }
-                : next;
+              smooth = stabilizePointer(smooth, next, now - lastFrame || 45);
+              lastFrame = now;
               const { x, y } = smooth;
               if (pointer.current) {
                 pointer.current.style.display = "block";
@@ -163,10 +192,23 @@ export default function Hands({
                 if (previous) {
                   const scrollable = target?.closest(".modal,.chat-log");
                   const amount = (y - previous.y) * 2.5;
-                  if (scrollable) scrollable.scrollTop += amount;
+                  if (target?.closest(".scene-canvas"))
+                    controlsRef.current?.zoom(
+                      Math.exp(
+                        Math.max(
+                          -0.045,
+                          Math.min(0.045, (y - previous.y) * 0.008),
+                        ),
+                      ),
+                    );
+                  else if (scrollable) scrollable.scrollTop += amount;
                   else window.scrollBy(0, amount);
                 }
-                report("Two fingers: move up or down to scroll");
+                report(
+                  target?.closest(".scene-canvas")
+                    ? "Two fingers over scene: move up to zoom in, down to zoom out"
+                    : "Two fingers: move up or down to scroll",
+                );
               } else if (g.pinch) {
                 if (!wasPinching) {
                   const range = target
@@ -176,6 +218,12 @@ export default function Hands({
                     ) as HTMLInputElement | null;
                   dragTarget = range && !range.disabled ? range : null;
                   orbiting = !!target?.closest(".scene-canvas") && !dragTarget;
+                  if (orbiting)
+                    document.dispatchEvent(
+                      new CustomEvent("mindscope:inspect", {
+                        detail: { x, y },
+                      }),
+                    );
                   if (!dragTarget && !orbiting && now - lastClick > 650) {
                     const button = target?.closest(
                       "button,a",
@@ -351,9 +399,10 @@ export default function Hands({
                   <div>
                     <MoveVertical size={19} />
                     <span>
-                      Hold up two fingers to scroll.
+                      Two fingers to zoom or scroll.
                       <small>
-                        Move your index and middle fingers up or down.
+                        Over the scene: zoom. Elsewhere: scroll. Or pinch with
+                        both hands and spread.
                       </small>
                     </span>
                   </div>

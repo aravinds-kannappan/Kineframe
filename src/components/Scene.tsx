@@ -78,14 +78,18 @@ function disposeGroup(group: THREE.Group) {
 export default function Scene({
   state,
   controlsRef,
+  onInspect,
 }: {
   state: State;
   controlsRef: MutableRefObject<ViewControls | null>;
+  onInspect?: (element: string) => void;
 }) {
   const host = useRef<HTMLDivElement>(null),
     stateRef = useRef(state),
     [error, setError] = useState(false);
   stateRef.current = state;
+  const inspectRef = useRef(onInspect);
+  inspectRef.current = onInspect;
   useEffect(() => {
     const el = host.current!;
     let renderer: THREE.WebGLRenderer;
@@ -143,6 +147,38 @@ export default function Scene({
     scene.add(grid);
     const group = new THREE.Group();
     scene.add(group);
+    const raycaster = new THREE.Raycaster();
+    const inspect = (x: number, y: number) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom)
+        return;
+      raycaster.setFromCamera(
+        new THREE.Vector2(
+          ((x - rect.left) / rect.width) * 2 - 1,
+          (-(y - rect.top) / rect.height) * 2 + 1,
+        ),
+        camera,
+      );
+      const hit = raycaster
+        .intersectObjects(group.children, true)
+        .find((h) => h.object.userData.inspect);
+      if (hit) inspectRef.current?.(hit.object.userData.inspect);
+    };
+    let down = { x: 0, y: 0 };
+    const pointerDown = (e: PointerEvent) => {
+      down = { x: e.clientX, y: e.clientY };
+    };
+    const pointerUp = (e: PointerEvent) => {
+      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) < 7)
+        inspect(e.clientX, e.clientY);
+    };
+    const handInspect = (e: Event) => {
+      const { x, y } = (e as CustomEvent).detail;
+      inspect(x, y);
+    };
+    renderer.domElement.addEventListener("pointerdown", pointerDown);
+    renderer.domElement.addEventListener("pointerup", pointerUp);
+    document.addEventListener("mindscope:inspect", handInspect);
     let lastKey = "",
       lastConcept = "";
     let moving: THREE.Mesh | undefined,
@@ -245,6 +281,8 @@ export default function Scene({
         landing.position.set(offset + r.range * scale, 0.03, 0);
         group.add(landing);
         moving = sphere(0.19, lime);
+        moving.userData.inspect = "projectile";
+        pad.userData.inspect = "launch";
         group.add(moving);
         group.add(label("LAUNCH", offset, 0.02, 1.4, "#c8f582"));
         group.add(label("LANDING", offset + r.range * scale, 0.02, 1.4));
@@ -288,6 +326,7 @@ export default function Scene({
             new THREE.BoxGeometry(1.9, 0.48, 0.5),
             new THREE.MeshStandardMaterial({ color: 0xe5ba83, roughness: 0.6 }),
           );
+          body.userData.inspect = name;
           body.position.set(x, y, 0);
           group.add(body);
           for (const dx of [-0.55, -0.25, 0.3]) {
@@ -310,6 +349,7 @@ export default function Scene({
           new THREE.BoxGeometry(0.55, 1.3, 0.65),
           new THREE.MeshStandardMaterial({ color: lime }),
         );
+        battery.userData.inspect = "battery";
         battery.position.set(-5, 2.2, 0);
         group.add(battery);
         group.add(label(`${p.voltage} V`, -6.1, 2.3, 0, "#c8f582"));
@@ -362,6 +402,12 @@ export default function Scene({
                 .lerp(new THREE.Color(lime), values[l][i])
                 .getHex(),
             );
+            node.userData.inspect =
+              l === 0
+                ? `input ${i + 1}`
+                : l === 1
+                  ? `hidden neuron ${i + 1}`
+                  : "output";
             node.position.copy(p);
             group.add(node);
             group.add(
@@ -449,6 +495,9 @@ export default function Scene({
     };
     animate();
     return () => {
+      document.removeEventListener("mindscope:inspect", handInspect);
+      renderer.domElement.removeEventListener("pointerdown", pointerDown);
+      renderer.domElement.removeEventListener("pointerup", pointerUp);
       cancelAnimationFrame(raf);
       observer.disconnect();
       disposeGroup(group);

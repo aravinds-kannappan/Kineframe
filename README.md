@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://localhost:5173**. The welcome screen offers webcam interaction or mouse/keyboard controls. No AI key or account is required to explore the lab. Vite proxies room and tutor requests to the Node server on port 3001.
+Open **http://localhost:5173** for the interactive story, or **http://localhost:5173/lab** for the complete examples lab. The welcome screen offers webcam interaction or mouse/keyboard controls. No AI key or account is required to explore the lab. Vite proxies room and tutor requests to the Node server on port 3001.
 
 For a production build:
 
@@ -26,7 +26,7 @@ Open **http://localhost:3001**. The same server serves the built frontend, HTTP 
 
 ## Explore with your hands
 
-Select **Enable webcam & explore** and grant the browser camera permission. The first run downloads MediaPipe tracking assets. Good lighting, a stable camera, and one clearly visible hand help.
+Select **Enable webcam & explore** and grant the browser camera permission. The first run downloads MediaPipe tracking assets. Good lighting and a stable camera help. Use one hand for pointing, or two for spread-to-zoom. Pointer motion has time-aware smoothing and a resting dead zone.
 
 | Gesture | Interaction |
 | --- | --- |
@@ -35,11 +35,19 @@ Select **Enable webcam & explore** and grant the browser camera permission. The 
 | Pinch over a parameter, hold, and move sideways | Adjust its slider |
 | Pinch over the 3D scene, hold, and move | Orbit the camera |
 | Extend index and middle fingers, fold the others, and move up/down | Scroll the page, dialog, or chat |
-| Pinch the on-screen + / − buttons | Zoom |
+| Pinch with both hands, then spread / bring together | Zoom in / out |
+| Two fingers over the 3D scene, moving up / down | One-hand zoom in / out |
+| Pinch the on-screen + / − buttons | Zoom fallback |
 
 Release between selections. **Stop camera** immediately stops all video tracks and closes the tracker. **Hand controls** reopens the guide. Frames and landmarks stay on the device; the server receives only validated simulation actions. The initial tracking assets come from Google and jsDelivr. Camera access needs HTTPS or localhost; a plain HTTP LAN address is generally not a secure context.
 
 Mouse, touch, and keyboard controls remain available. Arbitrary tutor text, room-code entry, and operating-system file dialogs still use standard browser input. Learners can join through an invite link without typing a code. Voice input is not implemented. Real camera tracking depends on the device and lighting; the gesture math is unit tested, but live hand accuracy still requires testing on the target classroom hardware.
+
+## Guided experience
+
+The front page is itself a working simulation: **predict → experiment → inspect → ask**. Three chapters explore gravity, circuit topology, and XOR learning. Predictions receive feedback; scenario buttons change real simulation inputs. Click a projectile, launch pad, resistor, battery, or neuron to inspect its live values, or use the named object buttons. The learning companion can explain the selected element or apply validated changes through the existing tutor adapter. Without an API key it clearly identifies guided mode; open-ended AI needs the configured key. Generating new simulation types from prompts is not implemented.
+
+The **Examples lab** navigation opens `/lab`, preserving the complete controls, classrooms, and checkpoints. Object selection there opens the Insights panel. Navigating between these pages stops the camera; use Hand controls to enable it again. Room links continue to work.
 
 ## Three real simulations
 

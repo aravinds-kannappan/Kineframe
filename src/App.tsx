@@ -1,3 +1,4 @@
+import { describeElement } from "../shared/inspection";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowDownToLine,
@@ -126,6 +127,10 @@ export default function App() {
     [joinId, setJoinId] = useState(""),
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState<"controls" | "insights">("controls"),
+    [inspected, setInspected] = useState<{
+      concept: Concept;
+      element: string;
+    } | null>(null),
     [chat, setChat] = useState<Chat[]>([]),
     [question, setQuestion] = useState(""),
     [asking, setAsking] = useState(false),
@@ -481,6 +486,8 @@ export default function App() {
       <main>
         <header className="topbar">
           <div className="breadcrumb">
+            <a href="/">The experience</a>
+            <ChevronRight size={13} />
             Workspace <ChevronRight size={13} />
             <span>Explore lab</span>
           </div>
@@ -584,7 +591,14 @@ export default function App() {
                         : "XOR · BATCH GRADIENT DESCENT"}
                   </span>
                 </div>
-                <Scene state={state} controlsRef={controls} />
+                <Scene
+                  state={state}
+                  controlsRef={controls}
+                  onInspect={(element) => {
+                    setInspected({ concept: state.concept, element });
+                    setTab("insights");
+                  }}
+                />
                 <div className="axis-label">
                   <span>Y</span>
                   <i />X <small>Z</small>
@@ -954,6 +968,13 @@ export default function App() {
                   </>
                 ) : (
                   <div className="insight-content">
+                    {inspected?.concept === state.concept && (
+                      <>
+                        <span className="eyebrow">SELECTED ELEMENT</span>
+                        <h3>{inspected.element}</h3>
+                        <p>{describeElement(state, inspected.element)}</p>
+                      </>
+                    )}
                     <span className="eyebrow">BEHIND THE SCENE</span>
                     <h3>
                       {state.concept === "projectile"

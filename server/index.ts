@@ -1,3 +1,4 @@
+import { describeElement } from "../shared/inspection.js";
 import express from "express";
 import { createServer } from "node:http";
 import { randomBytes, timingSafeEqual } from "node:crypto";
@@ -213,6 +214,25 @@ app.post("/api/tutor", async (req, res) => {
     return;
   }
   const { question, state, mode } = body.data;
+  const selected = question.match(/Selected element: ([^\n]+)/)?.[1]?.trim();
+  const allowedElements =
+    state.concept === "projectile"
+      ? ["launch", "projectile"]
+      : state.concept === "circuit"
+        ? ["battery", "R₁", "R₂"]
+        : [
+            "input 1",
+            "input 2",
+            "hidden neuron 1",
+            "hidden neuron 2",
+            "hidden neuron 3",
+            "hidden neuron 4",
+            "output",
+          ];
+  const context =
+    selected && allowedElements.includes(selected)
+      ? describeElement(state, selected) + "\n\n" + explain(state, question)
+      : explain(state, question);
   try {
     if (!process.env.OPENAI_API_KEY) {
       const action = mode === "command" ? parseCommand(question, state) : null;
@@ -223,7 +243,7 @@ app.post("/api/tutor", async (req, res) => {
             ? action
               ? "Ready. Your requested change is applied."
               : "Try “set angle to 60”, “show circuits”, “use parallel”, or “start”. Commands must match the current concept."
-            : explain(state, question),
+            : context,
         action,
         source: "guided",
       });
@@ -244,7 +264,7 @@ app.post("/api/tutor", async (req, res) => {
           mode,
           question,
           state,
-          computedExplanation: explain(state, question),
+          computedExplanation: context,
         }),
         text: { format: { type: "json_object" } },
       }),
@@ -267,14 +287,12 @@ app.post("/api/tutor", async (req, res) => {
     }
     res.json({ answer: result.answer, action, source: "hosted" });
   } catch {
-    res
-      .status(502)
-      .json({
-        error:
-          mode === "command"
-            ? "The command could not be validated. Use the visible controls or try a simpler command."
-            : "The tutor is unavailable right now. Try again or use the lesson notes.",
-      });
+    res.status(502).json({
+      error:
+        mode === "command"
+          ? "The command could not be validated. Use the visible controls or try a simpler command."
+          : "The tutor is unavailable right now. Try again or use the lesson notes.",
+    });
   }
 });
 const root = path.resolve(

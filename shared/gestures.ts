@@ -37,3 +37,23 @@ export function sliderValue(
     ),
   );
 }
+
+/** Time-aware low-pass filter with a resting dead zone; fast travel remains responsive. */
+export function stabilizePointer(
+  previous: { x: number; y: number } | null,
+  next: { x: number; y: number },
+  dt = 45,
+) {
+  if (!previous) return next;
+  const distance = Math.hypot(next.x - previous.x, next.y - previous.y);
+  if (distance < 4) return previous;
+  const tau = distance < 35 ? 150 : 65;
+  const alpha = 1 - Math.exp(-Math.min(100, Math.max(1, dt)) / tau);
+  return {
+    x: previous.x + (next.x - previous.x) * alpha,
+    y: previous.y + (next.y - previous.y) * alpha,
+  };
+}
+export function zoomRatio(previous: number, current: number) {
+  return Math.max(0.94, Math.min(1.06, previous / Math.max(0.02, current)));
+}

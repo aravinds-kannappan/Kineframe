@@ -146,3 +146,33 @@ test("pinch hysteresis prevents repeated selection around threshold", () => {
   assert.equal(gesture(h, false).pinch, true);
   assert.ok(gesture(h).x >= 0 && gesture(h).x <= 1);
 });
+
+test("hand pointer suppresses resting jitter but converges during deliberate motion", async () => {
+  const { stabilizePointer, zoomRatio } = await import("../shared/gestures");
+  assert.deepEqual(stabilizePointer({ x: 100, y: 100 }, { x: 102, y: 101 }), {
+    x: 100,
+    y: 100,
+  });
+  let point = { x: 0, y: 0 };
+  for (let i = 0; i < 20; i++)
+    point = stabilizePointer(point, { x: 300, y: 200 }, 45);
+  assert.ok(Math.hypot(300 - point.x, 200 - point.y) < 5);
+  assert.ok(zoomRatio(0.3, 0.4) < 1);
+  assert.ok(zoomRatio(0.4, 0.3) > 1);
+  assert.equal(zoomRatio(0.3, 0.3), 1);
+  assert.ok(Number.isFinite(zoomRatio(0.3, 0)));
+});
+test("selected components explain actual branch values and neuron activations", async () => {
+  const { describeElement } = await import("../shared/inspection");
+  const s = initialState();
+  s.concept = "circuit";
+  assert.match(describeElement(s, "R₁"), /0.400 A/);
+  s.params.circuit.parallel = true;
+  assert.match(describeElement(s, "R₁"), /1.200 A/);
+  s.concept = "network";
+  assert.ok(
+    describeElement(s, "hidden neuron 1").includes(
+      forward(s.network, samples[s.params.network.sample]).hidden[0].toFixed(4),
+    ),
+  );
+});
