@@ -12,6 +12,8 @@ COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=build --chown=node:node /app/server ./server
 COPY --from=build --chown=node:node /app/shared ./shared
+COPY --from=build --chown=node:node /app/fixtures ./fixtures
+COPY --from=build --chown=node:node /app/output/pdf ./output/pdf
 COPY --from=build --chown=node:node /app/package.json ./package.json
 USER node
 EXPOSE 3001

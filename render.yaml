@@ -1,14 +1,20 @@
 services:
   - type: web
-    name: mindscope
+    name: kineframe
     runtime: node
-    buildCommand: npm ci && npm run build
+    plan: free
+    region: oregon
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
-        value: 22.23.0
-      - key: OPENAI_API_KEY
-        sync: false
+        value: 22.23.2
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY_HOPS
+        value: "1"
       - key: OPENAI_MODEL
         value: gpt-4.1-mini

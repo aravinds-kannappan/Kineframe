@@ -20,6 +20,9 @@ import {
 import { z } from "zod";
 const app = express();
 app.disable("x-powered-by");
+// Render terminates HTTPS at its reverse proxy. Opt in only on that deployment
+// so rate limits count visitors rather than sharing one bucket for the proxy.
+if (process.env.TRUST_PROXY_HOPS === "1") app.set("trust proxy", 1);
 app.use(express.json({ limit: "128kb" }));
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -45,7 +48,7 @@ type Room = {
 const rooms = new Map<string, Room>();
 const requests = new Map<string, { count: number; reset: number }>();
 app.use("/api", (req, res, next) => {
-  const key = req.socket.remoteAddress ?? "unknown",
+  const key = req.ip ?? req.socket.remoteAddress ?? "unknown",
     now = Date.now();
   let record = requests.get(key);
   if (!record || record.reset < now) {
