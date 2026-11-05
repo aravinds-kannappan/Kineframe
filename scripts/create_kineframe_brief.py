@@ -82,6 +82,9 @@ def page(number, label):
     c.setLineWidth(.7)
     c.line(48, 43, 564, 43)
     text("CONCEPT + PROTOTYPE  /  05 NOV 2026", 48, 28, 7.5, MUTED)
+    text("kineframe.onrender.com", 414, 28, 7.5, VIOLET)
+    c.linkURL("https://kineframe.onrender.com", (414, 25, 500, 37), relative=0)
+    c.setFillColor(HexColor(MUTED))
     c.drawRightString(564, 28, f"{number} / 2")
 
 
