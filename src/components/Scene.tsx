@@ -9,6 +9,7 @@ import {
   type State,
 } from "../../shared/simulation";
 export type ViewControls = {
+  interact?: (phase: "start" | "move" | "end", x: number, y: number) => boolean;
   rotate: (x: number, y: number) => void;
   reset: () => void;
   zoom: (factor: number) => void;

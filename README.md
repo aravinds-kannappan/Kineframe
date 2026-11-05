@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://localhost:5173** for the interactive story, or **http://localhost:5173/lab** for the complete examples lab. The welcome screen offers webcam interaction or mouse/keyboard controls. No AI key or account is required to explore the lab. Vite proxies room and tutor requests to the Node server on port 3001.
+Open **http://localhost:5173** for the full-screen circuit sandbox, **http://localhost:5173/experience** for the guided story, or **http://localhost:5173/lab** for the original examples and classrooms. The welcome screen offers webcam interaction or mouse/keyboard controls. No AI key or account is required to explore the lab. Vite proxies room and tutor requests to the Node server on port 3001.
 
 For a production build:
 
@@ -24,16 +24,39 @@ npm start
 
 Open **http://localhost:3001**. The same server serves the built frontend, HTTP API, and WebSocket rooms. `PORT` is configurable. Both commands load an optional `.env` file.
 
+## Circuit sandbox
+
+The home page is a full-screen spatial workspace. Its translucent components and live measurements are rendered in Three.js. No physical holographic display or hardware connection is implied.
+
+- **Build:** add resistors, lamps, and switches from the floating palette. Drag the components directly, with mouse/touch or a camera pinch. Select any two glowing terminals to wire them. Terminals and all components also have accessible button alternatives in the inspector and object strip.
+- **Inspect:** select a component to see its computed voltage, current, and power, adjust its value, toggle a switch, or remove a connection. Floating components display undefined readings rather than made-up zeros. Component positions do not affect electrical resistance.
+- **Experiment:** ask the companion to propose a parallel branch, halve the battery voltage, open a switch, or change a component. Every proposal has a validated operation list and solver-computed preview. Only **Run experiment** changes the circuit. Editing the circuit invalidates pending proposals. Hosted AI can propose combinations of the supported operations; without a key, clearly labeled guided templates work.
+- **Compare and rewind:** capture a baseline, inspect before/after supply current, undo/redo up to 40 edits, or restore the starter circuit. Dragging is a single undo step. Slider changes are individual steps. The latest board autosaves in this browser; circuit JSON export/import is separate from the original lab checkpoint format.
+- **Voice:** microphone permission is explicitly requested. Browser Web Speech recognition sends a final transcript to the selected Ask/Experiment mode; spoken replies are opt-in. Support depends on browser/platform and its speech service. Audio may be processed by the browser's provider; Mindscope does not record or store audio. The transcript and numerical circuit state go to the configured AI service when using hosted AI. Unsupported browsers or denied permission keep a text fallback.
+
+The solver uses nodal analysis for **one ideal DC battery (1–24 V), resistors, constant-resistance lamps, and ideal switches**, with up to 12 components and 30 wires. It supports arbitrary wiring within that scope, including branches and bridge networks. It distinguishes open circuits, floating islands, and source shorts. A shorted ideal voltage source has no finite current solution; the UI reports a short and suspends the flow animation. Currents inside ideal switch networks are not uniquely resolved and are explicitly unavailable. Lamp glow illustrates calculated power; it is not a thermal filament model. Animation pause only pauses the flow markers; steady-state electrical readings remain live. No AC, capacitors, inductors, transistors, or arbitrary code-generated physics.
+
+The new sandbox is a **personal, browser-local workspace**; shared-room support remains in the original `/lab`. It is not silently synchronized to a classroom.
+
+### Try the demo
+
+1. Select **R1** and ask for **Add a parallel path**.
+2. Inspect the proposal: supply current is predicted to change from 0.200 A to 0.240 A.
+3. Run it; inspect the lamp and compare its increased power.
+4. Rewind, then open **S1**. The circuit goes open and the lamp loses power.
+5. Add a component yourself, move it, and connect its terminals. Ask the companion about that component.
+
 ## Explore with your hands
 
-Select **Enable webcam & explore** and grant the browser camera permission. The first run downloads MediaPipe tracking assets. Good lighting and a stable camera help. Use one hand for pointing, or two for spread-to-zoom. Pointer motion has time-aware smoothing and a resting dead zone.
+Select **Enable webcam & explore** and grant the browser camera permission. The first run downloads MediaPipe tracking assets. Good lighting and a stable camera help. Use one hand for pointing, or two for spread-to-zoom. Pointer motion has time-aware smoothing and a resting dead zone. MediaPipe inference runs in a dedicated worker, with one transferred image frame in flight, so it does not block scene rendering. The hand-controls guide includes a no-camera compatibility check using a synthetic blank frame.
 
 | Gesture | Interaction |
 | --- | --- |
 | Point with your index finger | Move the on-screen pointer; movement is mirrored like a selfie camera |
 | Pinch thumb and index finger | Select a button, switch concepts, open the lesson guide, launch/pause, export, or open room controls |
 | Pinch over a parameter, hold, and move sideways | Adjust its slider |
-| Pinch over the 3D scene, hold, and move | Orbit the camera |
+| Pinch a sandbox component, hold, and move | Place the component directly; attached wires follow |
+| Pinch empty space in the 3D scene, hold, and move | Orbit the camera |
 | Extend index and middle fingers, fold the others, and move up/down | Scroll the page, dialog, or chat |
 | Pinch with both hands, then spread / bring together | Zoom in / out |
 | Two fingers over the 3D scene, moving up / down | One-hand zoom in / out |
@@ -41,11 +64,11 @@ Select **Enable webcam & explore** and grant the browser camera permission. The 
 
 Release between selections. **Stop camera** immediately stops all video tracks and closes the tracker. **Hand controls** reopens the guide. Frames and landmarks stay on the device; the server receives only validated simulation actions. The initial tracking assets come from Google and jsDelivr. Camera access needs HTTPS or localhost; a plain HTTP LAN address is generally not a secure context.
 
-Mouse, touch, and keyboard controls remain available. Arbitrary tutor text, room-code entry, and operating-system file dialogs still use standard browser input. Learners can join through an invite link without typing a code. Voice input is not implemented. Real camera tracking depends on the device and lighting; the gesture math is unit tested, but live hand accuracy still requires testing on the target classroom hardware.
+Mouse, touch, and keyboard controls remain available. Arbitrary tutor text, room-code entry, and operating-system file dialogs still use standard browser input. Learners can join through an invite link without typing a code. The circuit sandbox includes optional voice input. Real camera tracking depends on the device and lighting; the gesture math is unit tested, but live hand accuracy still requires testing on the target classroom hardware.
 
 ## Guided experience
 
-The front page is itself a working simulation: **predict → experiment → inspect → ask**. Three chapters explore gravity, circuit topology, and XOR learning. Predictions receive feedback; scenario buttons change real simulation inputs. Click a projectile, launch pad, resistor, battery, or neuron to inspect its live values, or use the named object buttons. The learning companion can explain the selected element or apply validated changes through the existing tutor adapter. Without an API key it clearly identifies guided mode; open-ended AI needs the configured key. Generating new simulation types from prompts is not implemented.
+The guided page at `/experience` is itself a working simulation: **predict → experiment → inspect → ask**. Three chapters explore gravity, circuit topology, and XOR learning. Predictions receive feedback; scenario buttons change real simulation inputs. Click a projectile, launch pad, resistor, battery, or neuron to inspect its live values, or use the named object buttons. The learning companion can explain the selected element or apply validated changes through the existing tutor adapter. Without an API key it clearly identifies guided mode; open-ended AI needs the configured key. Generating new simulation types from prompts is not implemented.
 
 The **Examples lab** navigation opens `/lab`, preserving the complete controls, classrooms, and checkpoints. Object selection there opens the Insights panel. Navigating between these pages stops the camera; use Hand controls to enable it again. Room links continue to work.
 
@@ -103,6 +126,6 @@ npm run check # both
 
 GitHub Actions runs these checks on pushes and pull requests. Tests include analytic physics checks, Kirchhoff/Ohm consistency, XOR convergence, finite-difference gradients, invalid checkpoints/actions, hand pinch hysteresis, slider clamping, multi-client synchronization, presenter denial, reconnect, and tutor privacy.
 
-Browser review covered the camera-choice screen, mouse fallback, all concepts, circuit topology changes, training and tutor results, responsive layout, and room creation. A real-camera classroom trial and hosted-AI end-to-end test require the corresponding hardware/credentials.
+The production hand-tracking worker was initialized and exercised with a synthetic blank image without opening the camera. Browser review covered the camera-choice screen, mouse fallback, all concepts, circuit topology changes, training and tutor results, responsive layout, room creation, direct component dragging, circuit experiment preview/application, rewind, switch behavior, and voice consent. A real-camera classroom trial and hosted-AI end-to-end test require the corresponding hardware/credentials.
 
 See [Architecture](docs/architecture.md) for module boundaries and extension points.

@@ -1,3 +1,4 @@
+import { circuitAssistant } from "./circuitAssistant.js";
 import { describeElement } from "../shared/inspection.js";
 import express from "express";
 import { createServer } from "node:http";
@@ -295,6 +296,7 @@ app.post("/api/tutor", async (req, res) => {
     });
   }
 });
+app.use("/api/circuit-assistant", circuitAssistant);
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../dist",

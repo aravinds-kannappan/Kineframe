@@ -37,3 +37,16 @@ Add a concept by extending the schemas, reducer/tick, tested equations, scene re
 To add private student experiments, create a separate state branch with an explicit share-back operation; do not bypass room authority. To add durable progress or lessons, introduce authenticated users and a database with explicit assessment records. To scale rooms, separate simulation scheduling from transport and add shared state/pub-sub with room affinity.
 
 For spatial hardware, consume the same validated scene state through a WebXR or native renderer and device-specific input adapter. Physical alignment, supported hardware, and gesture calibration are separate capabilities. This browser implementation does not claim holographic projection.
+
+
+## Circuit sandbox extension
+
+The new `/` and `/sandbox` routes use `src/sandbox/CircuitSandbox.tsx`, while `/experience` and `/lab` preserve earlier experiences. `shared/circuitLab.ts` is the schema and solver authority. It collapses wire/closed-switch nodes with union-find, anchors one battery, solves reachable node potentials with pivoted Gaussian elimination, then computes resistive branch currents and power. Disconnected islands remain undefined. Source shorts are a separate status.
+
+`CircuitWorld.tsx` raycasts component bodies and terminal spheres, maps dragging to a horizontal world plane, and retains logical connections while components move. Both browser pointer events and hand events use the same interaction controller. Objects are translucent with wire outlines; animation illustrates branch current and lamp power. There is no fabricated wire current in ideal-wire loops.
+
+`server/circuitAssistant.ts` receives only a schema-valid board, question, mode, and selected object. It returns either an explanation or a validated plan of add/remove/set/toggle/connect/disconnect operations. Every preview is solved by the same local engine. Applying a proposal is guarded by an exact snapshot match to avoid stale actions. The server holds no new sandbox state; this extension is deliberately single-user. The route inherits existing API rate and payload limits.
+
+`handTracking.worker.ts` loads the pinned MediaPipe runtime in a worker. `handTracker.ts` transfers one ImageBitmap at a time and terminates inference when the camera stops. The UI thread handles pointer stabilization and interaction mapping. Tracking frames never enter an HTTP request.
+
+`Voice.tsx` wraps browser speech recognition with opt-in consent, feature detection, errors, cancellation, and unmount cleanup. Browser speech services can process audio remotely; no local-only claim is made. Voice experiment results still require the explicit Run experiment action. Spoken replies use browser speech synthesis only when enabled.

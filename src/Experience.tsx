@@ -257,7 +257,7 @@ export default function Experience() {
           mindscope<span>.</span>
         </a>
         <div>
-          <a className="active" href="/">
+          <a className="active" href="/experience">
             The experience
           </a>
           <a href="/lab">

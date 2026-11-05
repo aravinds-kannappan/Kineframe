@@ -486,7 +486,7 @@ export default function App() {
       <main>
         <header className="topbar">
           <div className="breadcrumb">
-            <a href="/">The experience</a>
+            <a href="/experience">The experience</a>
             <ChevronRight size={13} />
             Workspace <ChevronRight size={13} />
             <span>Explore lab</span>

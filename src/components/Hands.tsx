@@ -26,8 +26,10 @@ function shouldWelcome() {
 }
 export default function Hands({
   controlsRef,
+  mode = "orbit",
 }: {
   controlsRef: MutableRefObject<ViewControls | null>;
+  mode?: "orbit" | "circuit";
 }) {
   const [active, setActive] = useState(false),
     [loading, setLoading] = useState(false),
@@ -46,6 +48,34 @@ export default function Hands({
     },
     [],
   );
+  async function checkTracking() {
+    setLoading(true);
+    setMessage(
+      "Checking background tracking support without using your camera…",
+    );
+    let testTracker: import("./handTracker").HandTracker | undefined;
+    try {
+      const { createHandTracker } = await import("./handTracker");
+      testTracker = await createHandTracker();
+      const canvas = document.createElement("canvas");
+      canvas.width = 256;
+      canvas.height = 256;
+      canvas.getContext("2d")!.fillRect(0, 0, 256, 256);
+      await testTracker.detect(canvas, performance.now());
+      setMessage(
+        "Tracking engine ready. Your camera was not accessed. Enable webcam to begin.",
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Tracking is unavailable in this browser.",
+      );
+    } finally {
+      testTracker?.close();
+      setLoading(false);
+    }
+  }
   function dismiss() {
     try {
       sessionStorage.setItem("mindscope:camera-choice", "seen");
@@ -65,10 +95,11 @@ export default function Hands({
     setLoading(true);
     setMessage("Requesting camera access…");
     let stream: MediaStream | undefined,
-      tracker: import("@mediapipe/tasks-vision").HandLandmarker | undefined,
+      tracker: import("./handTracker").HandTracker | undefined,
       video: HTMLVideoElement | undefined,
       raf = 0;
     const teardown = () => {
+      controlsRef.current?.interact?.("end", 0, 0);
       cancelAnimationFrame(raf);
       stream?.getTracks().forEach((t) => t.stop());
       tracker?.close();
@@ -93,21 +124,8 @@ export default function Hands({
       setMessage(
         "Loading hand tracking. The first download may take a moment…",
       );
-      const { FilesetResolver, HandLandmarker } =
-        await import("@mediapipe/tasks-vision");
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm",
-      );
-      tracker = await HandLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath:
-            "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-        },
-        runningMode: "VIDEO",
-        numHands: 2,
-        minHandDetectionConfidence: 0.6,
-        minTrackingConfidence: 0.6,
-      });
+      const { createHandTracker } = await import("./handTracker");
+      tracker = await createHandTracker();
       if (request !== generation.current) {
         teardown();
         return;
@@ -127,6 +145,7 @@ export default function Hands({
         previous: { x: number; y: number } | null = null,
         dragTarget: HTMLInputElement | null = null,
         orbiting = false,
+        manipulating = false,
         smooth: { x: number; y: number } | null = null,
         lastClick = 0,
         lastRange = 0,
@@ -139,13 +158,14 @@ export default function Hands({
           setStatus(text);
         }
       };
-      const loop = () => {
+      const loop = async () => {
         try {
           const now = performance.now();
           if (video!.currentTime !== lastTime && now - lastDetection > 45) {
             lastDetection = now;
             lastTime = video!.currentTime;
-            const detected = tracker!.detectForVideo(video!, now).landmarks;
+            const detected = await tracker!.detect(video!, now);
+            if (request !== generation.current) return;
             const hand = detected[0];
             if (
               detected.length === 2 &&
@@ -160,6 +180,10 @@ export default function Hands({
                 Math.abs(distance - zoomDistance) > 0.003
               )
                 controlsRef.current?.zoom(zoomRatio(zoomDistance, distance));
+              if (manipulating) {
+                controlsRef.current?.interact?.("end", 0, 0);
+                manipulating = false;
+              }
               zoomDistance = distance;
               previous = null;
               wasPinching = true;
@@ -189,6 +213,10 @@ export default function Hands({
                 y,
               ) as HTMLElement | null;
               if (g.scroll) {
+                if (manipulating) {
+                  controlsRef.current?.interact?.("end", x, y);
+                  manipulating = false;
+                }
                 if (previous) {
                   const scrollable = target?.closest(".modal,.chat-log");
                   const amount = (y - previous.y) * 2.5;
@@ -218,13 +246,25 @@ export default function Hands({
                     ) as HTMLInputElement | null;
                   dragTarget = range && !range.disabled ? range : null;
                   orbiting = !!target?.closest(".scene-canvas") && !dragTarget;
+                  if (
+                    orbiting &&
+                    controlsRef.current?.interact?.("start", x, y)
+                  ) {
+                    manipulating = true;
+                    orbiting = false;
+                  }
                   if (orbiting)
                     document.dispatchEvent(
                       new CustomEvent("mindscope:inspect", {
                         detail: { x, y },
                       }),
                     );
-                  if (!dragTarget && !orbiting && now - lastClick > 650) {
+                  if (
+                    !dragTarget &&
+                    !orbiting &&
+                    !manipulating &&
+                    now - lastClick > 650
+                  ) {
                     const button = target?.closest(
                       "button,a",
                     ) as HTMLElement | null;
@@ -234,7 +274,10 @@ export default function Hands({
                     }
                   }
                 }
-                if (dragTarget && now - lastRange > 75) {
+                if (manipulating) {
+                  controlsRef.current?.interact?.("move", x, y);
+                  report("Holding component · move to place · release to drop");
+                } else if (dragTarget && now - lastRange > 75) {
                   const r = dragTarget.getBoundingClientRect();
                   const value = sliderValue(
                     x,
@@ -262,6 +305,10 @@ export default function Hands({
                     "Selected. Release your pinch before selecting again.",
                   );
               } else {
+                if (manipulating) {
+                  controlsRef.current?.interact?.("end", x, y);
+                  manipulating = false;
+                }
                 dragTarget = null;
                 orbiting = false;
                 report(
@@ -272,6 +319,10 @@ export default function Hands({
               wasPinching = g.pinch;
             } else {
               if (pointer.current) pointer.current.style.display = "none";
+              if (manipulating) {
+                controlsRef.current?.interact?.("end", 0, 0);
+                manipulating = false;
+              }
               previous = null;
               smooth = null;
               wasPinching = false;
@@ -282,6 +333,7 @@ export default function Hands({
           }
           raf = requestAnimationFrame(loop);
         } catch {
+          if (request !== generation.current) return;
           teardown();
           setActive(false);
           setMessage(
@@ -390,9 +442,13 @@ export default function Hands({
                   <div>
                     <Move size={19} />
                     <span>
-                      Pinch the scene and move.
+                      {mode === "circuit"
+                        ? "Pinch a component and move."
+                        : "Pinch the scene and move."}
                       <small>
-                        Rotate the 3D experiment to see a new perspective.
+                        {mode === "circuit"
+                          ? "Grab to place. Select two glowing terminals to wire them. Pinch empty space to orbit."
+                          : "Rotate the 3D experiment to see a new perspective."}
                       </small>
                     </span>
                   </div>
@@ -451,6 +507,17 @@ export default function Hands({
                 >
                   Continue with mouse & keyboard
                 </button>
+                {!active && (
+                  <button
+                    type="button"
+                    className="text-button"
+                    style={{ margin: "16px auto 0" }}
+                    disabled={loading}
+                    onClick={checkTracking}
+                  >
+                    Check tracking compatibility (no camera)
+                  </button>
+                )}
               </section>
             </div>
           )}
