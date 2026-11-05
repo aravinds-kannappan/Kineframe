@@ -91,7 +91,7 @@ export default function Hands({
       const { FilesetResolver, HandLandmarker } =
         await import("@mediapipe/tasks-vision");
       const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm",
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm",
       );
       tracker = await HandLandmarker.createFromOptions(vision, {
         baseOptions: {
