@@ -1,131 +1,80 @@
-# Mindscope
+# Kineframe
 
-**Ideas you can move.** A browser learning lab where an instructor and learners explore the same live experiment through hand gestures, mouse controls, and a private tutor.
+**Build and debug, together in space.** A shared engineering workspace where a human and an agent inspect the same system, talk through evidence, review source changes, and verify the result.
 
-Built from the supplied two-page product blueprint. The browser is the first step toward the spatial teaching vision: it renders interactive 3D scenes, not physical holograms.
+This repository retains its original **Mindscope** name. Kineframe is the new product direction; the earlier education prototypes are archived routes, not the main experience.
+
+[Two-page concept brief](output/pdf/Kineframe_Two_Page_Brief.pdf) · [Architecture](docs/kineframe-architecture.md) · [Original Mindscope documentation](docs/mindscope-legacy.md)
 
 ## Run locally
 
-Requires Node.js **22.9+** and npm.
+Requires Node.js 22.9+.
 
 ```sh
-npm ci
+npm install
 npm run dev
 ```
 
-Open **http://localhost:5173** for the full-screen circuit sandbox, **http://localhost:5173/experience** for the guided story, or **http://localhost:5173/lab** for the original examples and classrooms. The welcome screen offers webcam interaction or mouse/keyboard controls. No AI key or account is required to explore the lab. Vite proxies room and tutor requests to the Node server on port 3001.
-
-For a production build:
+Open **http://localhost:5173/**. Vite proxies the API to the Node server on port 3001. For the production build:
 
 ```sh
 npm run build
 npm start
 ```
 
-Open **http://localhost:3001**. The same server serves the built frontend, HTTP API, and WebSocket rooms. `PORT` is configurable. Both commands load an optional `.env` file.
+Open **http://localhost:3001/**. The Node server is required: this is not a static-only website. Session state lives in server memory and expires after 30 minutes without activity; source copies live in temporary directories. Export a session to retain an investigation record. A server restart requires a new session.
 
-## Circuit sandbox
+## Try the complete loop
 
-The home page is a full-screen spatial workspace. Its translucent components and live measurements are rendered in Three.js. No physical holographic display or hardware connection is implied.
+1. Select **Connection leak**. Choose **Investigate together** or ask “Investigate the bug.”
+2. Watch real HTTP requests execute. Three declined payments exhaust a three-slot connection pool; the next order returns 503.
+3. Open **Changes** and inspect the before/after source. **Apply & verify** writes `service.mjs` in the isolated workspace and runs the regression checks.
+4. Confirm 2/2 incident checks pass and held connections drop from 3 to 0. The health check is a separate feature target.
+5. Ask **Build a health endpoint**, review and apply its proposal, then confirm all three checks pass.
+6. **Rewind last source change** restores the previous source. Test results are marked stale until rerun.
+7. Try **Timeout budget** for an infrastructure configuration example: a real HTTP request fails when a 25 ms timeout is shorter than its 65 ms upstream operation.
 
-- **Build:** add resistors, lamps, and switches from the floating palette. Drag the components directly, with mouse/touch or a camera pinch. Select any two glowing terminals to wire them. Terminals and all components also have accessible button alternatives in the inspector and object strip.
-- **Inspect:** select a component to see its computed voltage, current, and power, adjust its value, toggle a switch, or remove a connection. Floating components display undefined readings rather than made-up zeros. Component positions do not affect electrical resistance.
-- **Experiment:** ask the companion to propose a parallel branch, halve the battery voltage, open a switch, or change a component. Every proposal has a validated operation list and solver-computed preview. Only **Run experiment** changes the circuit. Editing the circuit invalidates pending proposals. Hosted AI can propose combinations of the supported operations; without a key, clearly labeled guided templates work.
-- **Compare and rewind:** capture a baseline, inspect before/after supply current, undo/redo up to 40 edits, or restore the starter circuit. Dragging is a single undo step. Slider changes are individual steps. The latest board autosaves in this browser; circuit JSON export/import is separate from the original lab checkpoint format.
-- **Voice:** microphone permission is explicitly requested. Browser Web Speech recognition sends a final transcript to the selected Ask/Experiment mode; spoken replies are opt-in. Support depends on browser/platform and its speech service. Audio may be processed by the browser's provider; Mindscope does not record or store audio. The transcript and numerical circuit state go to the configured AI service when using hosted AI. Unsupported browsers or denied permission keep a text fallback.
+Choose a service to set shared focus. Drag nodes to arrange your view. The graph is a declared logical map of the demo service, not discovered production topology. Selecting a node tells the agent what “this” refers to. Source, evidence, proposed changes and activity are visible together on desktop. Smaller screens offer Workspace and Agent tabs.
 
-The solver uses nodal analysis for **one ideal DC battery (1–24 V), resistors, constant-resistance lamps, and ideal switches**, with up to 12 components and 30 wires. It supports arbitrary wiring within that scope, including branches and bridge networks. It distinguishes open circuits, floating islands, and source shorts. A shorted ideal voltage source has no finite current solution; the UI reports a short and suspends the flow animation. Currents inside ideal switch networks are not uniquely resolved and are explicitly unavailable. Lamp glow illustrates calculated power; it is not a thermal filament model. Animation pause only pauses the flow markers; steady-state electrical readings remain live. No AC, capacitors, inductors, transistors, or arbitrary code-generated physics.
+## AI, conversation and memory
 
-The new sandbox is a **personal, browser-local workspace**; shared-room support remains in the original `/lab`. It is not silently synchronized to a classroom.
+Without credentials, **Guided** mode uses an explicitly labeled built-in playbook. Its executions and test results are real, but its responses and patches are bounded, deterministic recipes.
 
-### Try the demo
+To enable open-ended discussion and tool selection, create `.env` (gitignored):
 
-1. Select **R1** and ask for **Add a parallel path**.
-2. Inspect the proposal: supply current is predicted to change from 0.200 A to 0.240 A.
-3. Run it; inspect the lamp and compare its increased power.
-4. Rewind, then open **S1**. The circuit goes open and the lamp loses power.
-5. Add a component yourself, move it, and connect its terminals. Ask the companion about that component.
-
-## Explore with your hands
-
-Select **Enable webcam & explore** and grant the browser camera permission. The first run downloads MediaPipe tracking assets. Good lighting and a stable camera help. Use one hand for pointing, or two for spread-to-zoom. Pointer motion has time-aware smoothing and a resting dead zone. MediaPipe inference runs in a dedicated worker, with one transferred image frame in flight, so it does not block scene rendering. The hand-controls guide includes a no-camera compatibility check using a synthetic blank frame.
-
-| Gesture | Interaction |
-| --- | --- |
-| Point with your index finger | Move the on-screen pointer; movement is mirrored like a selfie camera |
-| Pinch thumb and index finger | Select a button, switch concepts, open the lesson guide, launch/pause, export, or open room controls |
-| Pinch over a parameter, hold, and move sideways | Adjust its slider |
-| Pinch a sandbox component, hold, and move | Place the component directly; attached wires follow |
-| Pinch empty space in the 3D scene, hold, and move | Orbit the camera |
-| Extend index and middle fingers, fold the others, and move up/down | Scroll the page, dialog, or chat |
-| Pinch with both hands, then spread / bring together | Zoom in / out |
-| Two fingers over the 3D scene, moving up / down | One-hand zoom in / out |
-| Pinch the on-screen + / − buttons | Zoom fallback |
-
-Release between selections. **Stop camera** immediately stops all video tracks and closes the tracker. **Hand controls** reopens the guide. Frames and landmarks stay on the device; the server receives only validated simulation actions. The initial tracking assets come from Google and jsDelivr. Camera access needs HTTPS or localhost; a plain HTTP LAN address is generally not a secure context.
-
-Mouse, touch, and keyboard controls remain available. Arbitrary tutor text, room-code entry, and operating-system file dialogs still use standard browser input. Learners can join through an invite link without typing a code. The circuit sandbox includes optional voice input. Real camera tracking depends on the device and lighting; the gesture math is unit tested, but live hand accuracy still requires testing on the target classroom hardware.
-
-## Guided experience
-
-The guided page at `/experience` is itself a working simulation: **predict → experiment → inspect → ask**. Three chapters explore gravity, circuit topology, and XOR learning. Predictions receive feedback; scenario buttons change real simulation inputs. Click a projectile, launch pad, resistor, battery, or neuron to inspect its live values, or use the named object buttons. The learning companion can explain the selected element or apply validated changes through the existing tutor adapter. Without an API key it clearly identifies guided mode; open-ended AI needs the configured key. Generating new simulation types from prompts is not implemented.
-
-The **Examples lab** navigation opens `/lab`, preserving the complete controls, classrooms, and checkpoints. Object selection there opens the Insights panel. Navigating between these pages stops the camera; use Hand controls to enable it again. Room links continue to work.
-
-## Three real simulations
-
-- **Projectile motion:** launch speed, angle, gravity presets, play/pause/reset, three comparison paths, range, height, and flight time. Constant gravity, level ground, no drag. The viewport auto-fits the trajectories; compare using the numeric scale.
-- **Electrical circuits:** series/parallel ideal DC circuits, adjustable voltage and two resistors, equivalent resistance, current, voltage drops, and power. Animated current markers are illustrative and not to physical scale.
-- **Neural networks:** an actual 2 → 4 → 1 sigmoid network learning XOR using full-batch backpropagation and binary cross-entropy. Inspect all four inputs, hidden activations, output, output-weight gradients, and recent loss history. Reset restores deterministic initial weights.
-
-All scenes support local camera rotation and zoom. The **Insights** tab explains the current numerical state. JSON checkpoints preserve parameters, weights, training history, simulation time, and saved trajectories. Import validates the entire file and pauses playback.
-
-## Live classroom
-
-1. Choose **Start a live room** to create a room from the current experiment.
-2. Share its learner invite link or eight-character room code.
-3. The creator controls the room. Learners receive authoritative scene updates while keeping private cameras and tutor conversations.
-4. The creator's presenter token is retained only in that browser tab's session storage and is never included in learner links or broadcast state.
-5. Disconnecting the last presenter pauses playback. The same tab can reconnect with its token.
-
-Rooms are anonymous, limited to 50 connections each, and live in one server's memory. Anyone who has an invite can view that room. Empty rooms expire after two hours. A server restart loses all rooms; export checkpoints. There is no account system, durable classroom history, student fork workflow, or presenter transfer yet. Do not run multiple independent replicas without adding a shared state/pub-sub layer.
-
-## Tutor and natural-language controls
-
-Without a key, **Guided tutor** produces deterministic teaching explanations from live values, with explicit supported commands. It is not a language model. Examples in **Change** mode:
-
-- `show circuits`, `show neural networks`, `show projectile motion`
-- `set speed to 25`, `set angle to 60`, `set gravity to 1.62`
-- `set voltage to 9`, `set r1 to 20`, `use parallel`
-- `set learning rate to 0.5`, `start`, `pause`, `reset`
-
-For hosted AI, copy `.env.example` to `.env`, set `OPENAI_API_KEY`, and restart. `OPENAI_MODEL` defaults to `gpt-4.1-mini` and can be changed to a model supporting Responses JSON output. The key stays server-side. Questions and the current numerical scene state are sent to OpenAI only when a tutor request is made; webcam frames are never sent. The UI distinguishes hosted AI from guided explanations. The AI proposes supported actions; Zod and the simulation reducer validate them, and the room still checks presenter authority. Learner tutor requests do not broadcast.
-
-The included API rate limit is basic and per socket IP. Before exposing a paid AI key to a broad public audience, add authentication, shared rate limiting, per-user quotas, and billing controls. Set `APP_ORIGIN` to your exact HTTPS origin in production if you want an explicit origin allowlist. The demo has no persistent chat storage.
-
-## Deploy
-
-Use a **single Node web service with WebSocket support**, not a static-only host. A Render Blueprint is included in `render.yaml`; connect this repository on Render, supply optional AI configuration, and deploy. Render supplies HTTPS and `PORT`. Set `APP_ORIGIN` to the final origin. Deploying is a separate step; pushing this repository does not create a public hosted service.
-
-Alternatively:
-
-```sh
-docker build -t mindscope .
-docker run --rm -p 3001:3001 --env-file .env mindscope
+```dotenv
+OPENAI_API_KEY=your-key
+OPENAI_MODEL=gpt-4.1-mini
 ```
 
-Omit `--env-file .env` when you have not created one. Use an HTTPS reverse proxy for remote webcam access and forward WebSocket upgrades. The runtime image uses an unprivileged user. Site hosting was not used because this MVP explicitly uses a persistent Node/WebSocket server.
+`npm run dev` and `npm start` load `.env`. Hosted AI receives the demo source, selected service, conversation, measured evidence, and saved memory. It can inspect, run checks, and propose one of three supported edits. **It cannot execute arbitrary shell commands, generate arbitrary executable patches, access arbitrary repositories, or deploy to production.** Both modes use the same reviewed patch flow.
 
-## Verify
+Agent activity streams through server-sent events. You can interrupt a running test or hosted request. Sending a new direction stops the previous operation before starting another. Already-written source changes are not automatically undone by interruption; use Rewind.
+
+Voice uses browser SpeechRecognition where supported. It is **turn-based**, not full-duplex realtime audio. Audio may be processed by the browser's recognition provider; the app stores only transcript events. Optional spoken replies use browser speech synthesis. Press Interrupt to stop work and spoken output. Memory is an editable list of up to eight explicit preferences, stored in this browser and supplied to new sessions. There is no passive behavioral learning or model training.
+
+## Spatial / VR room
+
+Select **Spatial room**. The Three.js preview presents the same session's service objects, evidence, conversation and source/patch panels. On desktop, drag to orbit and click panels to act. In a compatible WebXR headset browser, use the **Enter VR** control; controller rays or supported hand select events target the panels. Hold a service node to arrange it. Run checks, propose a fix, apply a reviewed patch, interrupt, and trigger voice from the room.
+
+Enable voice in the main workspace before entering VR. WebXR and microphone access require a secure context: localhost works on the same device; a headset visiting another computer's IP requires properly configured HTTPS. Opening the URL on desktop does not emulate or verify headset tracking. Some browsers do not support WebXR or SpeechRecognition.
+
+The source/patch panel is a summary view, not a full immersive code editor. WebXR implementation is present, but controller/hand tracking, audio permissions, comfort and readability require testing on physical hardware.
+
+## Validation and limitations
 
 ```sh
-npm test       # simulation, gradients, checkpoints, gestures, room permissions
-npm run build # TypeScript and production bundle
-npm run check # both
+npm run check   # tests, TypeScript and production build
 ```
 
-GitHub Actions runs these checks on pushes and pull requests. Tests include analytic physics checks, Kirchhoff/Ohm consistency, XOR convergence, finite-difference gradients, invalid checkpoints/actions, hand pinch hysteresis, slider clamping, multi-client synchronization, presenter denial, reconnect, and tutor privacy.
+Tests exercise analytical simulations retained from Mindscope, noisy hand-input traces, actual checkout HTTP failures, source writes, feature acceptance, timeout configuration, interruption, workspace isolation, stale proposal rejection, SSE and API validation. Browser QA covers the guided build/debug flow, memory editing, source review, and spatial-panel Run checks / Propose fix / Apply patch actions in the desktop 3D preview. Hosted AI and real microphone/headset interaction are not verified without the required credentials/devices.
 
-The production hand-tracking worker was initialized and exercised with a synthetic blank image without opening the camera. Browser review covered the camera-choice screen, mouse fallback, all concepts, circuit topology changes, training and tutor results, responsive layout, room creation, direct component dragging, circuit experiment preview/application, rewind, switch behavior, and voice consent. A real-camera classroom trial and hosted-AI end-to-end test require the corresponding hardware/credentials.
+This is a scoped functional prototype. It does not provide multi-user identity, production observability connectors, arbitrary code editing, cloud deployments, or behavioral preference learning. A session id is an unguessable bearer capability; anyone who obtains it can operate that demo session. Use locally or behind your own authentication. `APP_ORIGIN` restricts browser origins, but is not user authentication. The service executes only the bundled fixture and validated patch templates; this isolation is not a sandbox for untrusted code. No custom headset or holographic hardware is needed.
 
-See [Architecture](docs/architecture.md) for module boundaries and extension points.
+The main bundle currently triggers Vite's large-chunk advisory. This is a performance optimization opportunity rather than a failed build.
+
+## Brief and historical prototypes
+
+The checked-in two-page PDF is generated by `scripts/create_kineframe_brief.py` with ReportLab and pypdf. It embeds Arial from macOS; set `KINEFRAME_FONT_DIR` to a directory containing `Arial.ttf` and `Arial Bold.ttf` to regenerate elsewhere. Python is not required to run the app.
+
+Earlier routes remain available: `/sandbox` (circuit sandbox), `/experience` (guided concepts), `/lab` (classroom experiments). The previous hand input now includes debounced contacts, wrist continuity, palm-relative dragging, loss recovery, and two-hand zoom locking; those improvements are covered by trace tests, not a live camera trial.

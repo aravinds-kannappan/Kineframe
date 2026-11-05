@@ -1,3 +1,4 @@
+import { workspaceRouter } from "./workspace/router.js";
 import { circuitAssistant } from "./circuitAssistant.js";
 import { describeElement } from "../shared/inspection.js";
 import express from "express";
@@ -296,13 +297,19 @@ app.post("/api/tutor", async (req, res) => {
     });
   }
 });
+app.use("/api/workspace", workspaceRouter);
 app.use("/api/circuit-assistant", circuitAssistant);
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../dist",
 );
+app.get("/api/brief", (_req, res) =>
+  res.sendFile(
+    path.resolve(root, "../output/pdf/Kineframe_Two_Page_Brief.pdf"),
+  ),
+);
 app.use(express.static(root));
 app.get("/{*path}", (_req, res) => res.sendFile(path.join(root, "index.html")));
 server.listen(Number(process.env.PORT) || 3001, "0.0.0.0", () =>
-  console.log(`Mindscope server: http://localhost:${process.env.PORT || 3001}`),
+  console.log(`Kineframe server: http://localhost:${process.env.PORT || 3001}`),
 );

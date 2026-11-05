@@ -19,10 +19,14 @@ export default function Voice({
   onQuestion,
   onStatus,
   disabled,
+  workspace = false,
+  triggerRef,
 }: {
   onQuestion: (q: string) => void;
   onStatus: (s: string) => void;
   disabled: boolean;
+  workspace?: boolean;
+  triggerRef?: React.MutableRefObject<HTMLButtonElement | null>;
 }) {
   const [listening, setListening] = useState(false),
     [consent, setConsent] = useState(false),
@@ -109,6 +113,7 @@ export default function Voice({
     <>
       <button
         type="button"
+        ref={triggerRef}
         className={listening ? "voice listening" : "voice"}
         disabled={disabled && !listening}
         aria-label={listening ? "Stop voice input" : "Ask by voice"}
@@ -155,13 +160,15 @@ export default function Voice({
             <h2>Talk to your workspace.</h2>
             <p>
               Your browser may send audio to its speech recognition provider.
-              Mindscope receives the transcript and, if hosted AI is configured,
-              sends that text and the circuit state to the AI service. No audio
-              is saved by this app.
+              {workspace
+                ? "Kineframe receives the transcript and, if hosted AI is configured, sends it with the demo source, evidence, conversation and saved preferences to the AI service."
+                : "Mindscope receives the transcript and, if hosted AI is configured, sends that text and the circuit state to the AI service."}{" "}
+              No audio is saved by this app.
             </p>
             <p>
-              Speak a question or describe an experiment. Proposed changes
-              always wait for you to run them.
+              {workspace
+                ? "Speak one question at a time. You can interrupt the agent and redirect it. Source changes wait for your review. Enable voice here before entering VR."
+                : "Speak a question or describe an experiment. Proposed changes always wait for you to run them."}
             </p>
             <button
               type="button"

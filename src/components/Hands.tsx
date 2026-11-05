@@ -11,12 +11,8 @@ import {
   X,
 } from "lucide-react";
 import type { ViewControls } from "./Scene";
-import {
-  gesture,
-  sliderValue,
-  stabilizePointer,
-  zoomRatio,
-} from "../../shared/gestures";
+import { sliderValue } from "../../shared/gestures";
+import { HandInput } from "../../shared/handInput";
 function shouldWelcome() {
   try {
     return !sessionStorage.getItem("mindscope:camera-choice");
@@ -139,201 +135,144 @@ export default function Hands({
         teardown();
         return;
       }
+      const input = new HandInput();
       let lastTime = -1,
         lastDetection = 0,
-        wasPinching = false,
-        previous: { x: number; y: number } | null = null,
-        dragTarget: HTMLInputElement | null = null,
-        orbiting = false,
+        lastStatus = "";
+      let contact: { x: number; y: number } | null = null;
+      let previous: { x: number; y: number } | null = null;
+      let dragTarget: HTMLInputElement | null = null;
+      let button: HTMLElement | null = null;
+      let scrollTarget: HTMLElement | null = null;
+      let surface = false,
         manipulating = false,
-        smooth: { x: number; y: number } | null = null,
-        lastClick = 0,
-        lastRange = 0,
-        lastStatus = "",
-        zoomDistance: number | null = null,
-        lastFrame = 0;
-      const report = (text: string) => {
-        if (lastStatus !== text) {
-          lastStatus = text;
-          setStatus(text);
-        }
+        moved = false;
+      const release = (cancelled: boolean) => {
+        if (manipulating) controlsRef.current?.interact?.("end", 0, 0);
+        if (
+          !cancelled &&
+          !moved &&
+          button?.isConnected &&
+          !button.hasAttribute("disabled")
+        )
+          button.click();
+        contact = previous = null;
+        dragTarget = null;
+        button = scrollTarget = null;
+        manipulating = surface = moved = false;
       };
       const loop = async () => {
         try {
           const now = performance.now();
-          if (video!.currentTime !== lastTime && now - lastDetection > 45) {
+          if (video!.currentTime !== lastTime && now - lastDetection > 30) {
             lastDetection = now;
             lastTime = video!.currentTime;
             const detected = await tracker!.detect(video!, now);
             if (request !== generation.current) return;
-            const hand = detected[0];
-            if (
-              detected.length === 2 &&
-              detected.every((h) => gesture(h, true).pinch)
-            ) {
-              const distance = Math.hypot(
-                detected[0][9].x - detected[1][9].x,
-                detected[0][9].y - detected[1][9].y,
-              );
-              if (
-                zoomDistance !== null &&
-                Math.abs(distance - zoomDistance) > 0.003
-              )
-                controlsRef.current?.zoom(zoomRatio(zoomDistance, distance));
-              if (manipulating) {
-                controlsRef.current?.interact?.("end", 0, 0);
-                manipulating = false;
-              }
-              zoomDistance = distance;
-              previous = null;
-              wasPinching = true;
-              smooth = null;
-              if (pointer.current) pointer.current.style.display = "none";
-              report(
-                "Two-hand zoom: spread to zoom in · bring together to zoom out",
-              );
-              raf = requestAnimationFrame(loop);
-              return;
+            const frame = input.update(
+              detected,
+              performance.now(),
+              innerWidth,
+              innerHeight,
+            );
+            if (lastStatus !== frame.status) {
+              lastStatus = frame.status;
+              setStatus(frame.status);
             }
-            zoomDistance = null;
-            if (hand) {
-              const g = gesture(hand, wasPinching);
-              const next = { x: g.x * innerWidth, y: g.y * innerHeight };
-              smooth = stabilizePointer(smooth, next, now - lastFrame || 45);
-              lastFrame = now;
-              const { x, y } = smooth;
-              if (pointer.current) {
-                pointer.current.style.display = "block";
-                pointer.current.style.left = `${x}px`;
-                pointer.current.style.top = `${y}px`;
-                pointer.current.classList.toggle("pinching", g.pinch);
+            if (pointer.current) {
+              pointer.current.style.display = frame.point ? "block" : "none";
+              if (frame.point) {
+                pointer.current.style.left = `${frame.point.x}px`;
+                pointer.current.style.top = `${frame.point.y}px`;
               }
-              const target = document.elementFromPoint(
-                x,
-                y,
-              ) as HTMLElement | null;
-              if (g.scroll) {
-                if (manipulating) {
-                  controlsRef.current?.interact?.("end", x, y);
-                  manipulating = false;
-                }
-                if (previous) {
-                  const scrollable = target?.closest(".modal,.chat-log");
-                  const amount = (y - previous.y) * 2.5;
-                  if (target?.closest(".scene-canvas"))
-                    controlsRef.current?.zoom(
-                      Math.exp(
-                        Math.max(
-                          -0.045,
-                          Math.min(0.045, (y - previous.y) * 0.008),
-                        ),
-                      ),
-                    );
-                  else if (scrollable) scrollable.scrollTop += amount;
-                  else window.scrollBy(0, amount);
-                }
-                report(
-                  target?.closest(".scene-canvas")
-                    ? "Two fingers over scene: move up to zoom in, down to zoom out"
-                    : "Two fingers: move up or down to scroll",
-                );
-              } else if (g.pinch) {
-                if (!wasPinching) {
-                  const range = target
-                    ?.closest(".slider-field")
-                    ?.querySelector(
-                      "input[type=range]",
-                    ) as HTMLInputElement | null;
-                  dragTarget = range && !range.disabled ? range : null;
-                  orbiting = !!target?.closest(".scene-canvas") && !dragTarget;
-                  if (
-                    orbiting &&
-                    controlsRef.current?.interact?.("start", x, y)
-                  ) {
-                    manipulating = true;
-                    orbiting = false;
-                  }
-                  if (orbiting)
+              pointer.current.classList.toggle("pinching", frame.held);
+            }
+            for (const event of frame.events) {
+              if (event.type === "zoom") {
+                controlsRef.current?.zoom(event.factor);
+                continue;
+              }
+              if (event.type === "end") {
+                release(event.cancelled);
+                continue;
+              }
+              const { x, y } = event.point;
+              if (event.type === "start") {
+                contact = previous = event.point;
+                moved = false;
+                const target = document.elementFromPoint(
+                  x,
+                  y,
+                ) as HTMLElement | null;
+                const range = target
+                  ?.closest(".slider-field")
+                  ?.querySelector(
+                    "input[type=range]",
+                  ) as HTMLInputElement | null;
+                dragTarget = range && !range.disabled ? range : null;
+                button = target?.closest("button,a") as HTMLElement | null;
+                surface =
+                  !!target?.closest(".scene-canvas") && !dragTarget && !button;
+                if (surface) {
+                  manipulating = !!controlsRef.current?.interact?.(
+                    "start",
+                    x,
+                    y,
+                  );
+                  if (!manipulating && mode !== "circuit")
                     document.dispatchEvent(
                       new CustomEvent("mindscope:inspect", {
                         detail: { x, y },
                       }),
                     );
-                  if (
-                    !dragTarget &&
-                    !orbiting &&
-                    !manipulating &&
-                    now - lastClick > 650
-                  ) {
-                    const button = target?.closest(
-                      "button,a",
-                    ) as HTMLElement | null;
-                    if (button && !button.hasAttribute("disabled")) {
-                      button.click();
-                      lastClick = now;
-                    }
-                  }
                 }
-                if (manipulating) {
-                  controlsRef.current?.interact?.("move", x, y);
-                  report("Holding component · move to place · release to drop");
-                } else if (dragTarget && now - lastRange > 75) {
-                  const r = dragTarget.getBoundingClientRect();
-                  const value = sliderValue(
-                    x,
-                    r.left,
-                    r.width,
-                    Number(dragTarget.min),
-                    Number(dragTarget.max),
-                    Number(dragTarget.step) || 1,
-                  );
-                  document.dispatchEvent(
-                    new CustomEvent("mindscope:hand-range", {
-                      detail: { key: dragTarget.dataset.parameter, value },
-                    }),
-                  );
-                  lastRange = now;
-                  report("Pinch held: move sideways to adjust");
-                } else if (orbiting && previous) {
+                scrollTarget = target?.closest(
+                  ".modal,.chat-log,.sandbox-side",
+                ) as HTMLElement | null;
+                continue;
+              }
+              moved ||=
+                !!contact && Math.hypot(x - contact.x, y - contact.y) > 10;
+              if (manipulating) controlsRef.current?.interact?.("move", x, y);
+              else if (dragTarget) {
+                const r = dragTarget.getBoundingClientRect();
+                const value = sliderValue(
+                  x,
+                  r.left,
+                  r.width,
+                  Number(dragTarget.min),
+                  Number(dragTarget.max),
+                  Number(dragTarget.step) || 1,
+                );
+                document.dispatchEvent(
+                  new CustomEvent("mindscope:hand-range", {
+                    detail: { key: dragTarget.dataset.parameter, value },
+                  }),
+                );
+              } else if (surface && previous) {
+                if (controlsRef.current?.pan)
+                  controlsRef.current.pan(x - previous.x, y - previous.y);
+                else
                   controlsRef.current?.rotate(
                     (x - previous.x) * 0.008,
                     (y - previous.y) * 0.006,
                   );
-                  report("Pinch held: move to rotate the scene");
-                } else
-                  report(
-                    "Selected. Release your pinch before selecting again.",
-                  );
-              } else {
-                if (manipulating) {
-                  controlsRef.current?.interact?.("end", x, y);
-                  manipulating = false;
-                }
-                dragTarget = null;
-                orbiting = false;
-                report(
-                  "Point to aim · pinch to select · two fingers to scroll",
-                );
+              } else if (!button && previous) {
+                const amount = previous.y - y;
+                if (
+                  scrollTarget &&
+                  scrollTarget.scrollHeight > scrollTarget.clientHeight
+                )
+                  scrollTarget.scrollTop += amount;
+                else window.scrollBy(0, amount);
               }
-              previous = smooth;
-              wasPinching = g.pinch;
-            } else {
-              if (pointer.current) pointer.current.style.display = "none";
-              if (manipulating) {
-                controlsRef.current?.interact?.("end", 0, 0);
-                manipulating = false;
-              }
-              previous = null;
-              smooth = null;
-              wasPinching = false;
-              dragTarget = null;
-              orbiting = false;
-              report("Raise one hand into view. Good lighting helps.");
+              previous = event.point;
             }
           }
           raf = requestAnimationFrame(loop);
         } catch {
           if (request !== generation.current) return;
+          release(true);
           teardown();
           setActive(false);
           setMessage(
@@ -424,9 +363,10 @@ export default function Hands({
                   <div>
                     <MousePointer2 size={19} />
                     <span>
-                      Point to aim. Pinch to select.
+                      Point to aim. Pinch and release to tap.
                       <small>
-                        Open a concept, press a button, or launch an experiment.
+                        Keep one hand in view. A tap stays on the target you
+                        aimed at.
                       </small>
                     </span>
                   </div>
@@ -447,7 +387,7 @@ export default function Hands({
                         : "Pinch the scene and move."}
                       <small>
                         {mode === "circuit"
-                          ? "Grab to place. Select two glowing terminals to wire them. Pinch empty space to orbit."
+                          ? "Hold to drag a component. Tap two terminals to wire them. Drag empty space to pan."
                           : "Rotate the 3D experiment to see a new perspective."}
                       </small>
                     </span>
@@ -455,18 +395,20 @@ export default function Hands({
                   <div>
                     <MoveVertical size={19} />
                     <span>
-                      Two fingers to zoom or scroll.
+                      Pinch with both hands to zoom.
                       <small>
-                        Over the scene: zoom. Elsewhere: scroll. Or pinch with
-                        both hands and spread.
+                        Spread your hands to zoom in; bring them together to
+                        zoom out. Open both hands before the next gesture.
                       </small>
                     </span>
                   </div>
                 </div>
                 <p className="privacy-note">
-                  Camera access is optional. Frames are processed on this device
-                  and never sent to the room or tutor. Tracking files download
-                  on first use. You can stop the camera anytime.
+                  Like touch controls: hold to drag, release to stop. Drag a
+                  panel to scroll. If tracking pauses, open your fingers to
+                  resume. Camera access is optional. Frames are processed on
+                  this device and never sent to the room or tutor. Tracking
+                  files download on first use. You can stop the camera anytime.
                 </p>
                 {message && (
                   <p className="camera-error" role="status">

@@ -11,6 +11,7 @@ import {
 export type ViewControls = {
   interact?: (phase: "start" | "move" | "end", x: number, y: number) => boolean;
   rotate: (x: number, y: number) => void;
+  pan?: (dx: number, dy: number) => void;
   reset: () => void;
   zoom: (factor: number) => void;
 };

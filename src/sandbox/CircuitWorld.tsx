@@ -206,6 +206,24 @@ export default function CircuitWorld({
         );
         orbit.update();
       },
+      pan: (dx, dy) => {
+        const scale =
+          (2 *
+            camera.position.distanceTo(orbit.target) *
+            Math.tan(T.MathUtils.degToRad(camera.fov / 2))) /
+          el.clientHeight;
+        const delta = new T.Vector3()
+          .setFromMatrixColumn(camera.matrix, 0)
+          .multiplyScalar(-dx * scale)
+          .add(
+            new T.Vector3()
+              .setFromMatrixColumn(camera.matrix, 1)
+              .multiplyScalar(dy * scale),
+          );
+        camera.position.add(delta);
+        orbit.target.add(delta);
+        orbit.update();
+      },
       interact,
     };
     const down = (e: PointerEvent) => {

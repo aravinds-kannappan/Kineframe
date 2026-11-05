@@ -55,7 +55,7 @@ test(
     try {
       await new Promise<void>((resolve, reject) => {
         server.stdout.on("data", (d) => {
-          if (d.toString().includes("Mindscope server:")) resolve();
+          if (d.toString().includes("server: http://")) resolve();
         });
         server.once("exit", () => reject(new Error("Server exited early")));
       });
