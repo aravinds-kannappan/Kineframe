@@ -19,13 +19,11 @@ export default function Voice({
   onQuestion,
   onStatus,
   disabled,
-  workspace = false,
   triggerRef,
 }: {
   onQuestion: (q: string) => void;
   onStatus: (s: string) => void;
   disabled: boolean;
-  workspace?: boolean;
   triggerRef?: React.MutableRefObject<HTMLButtonElement | null>;
 }) {
   const [listening, setListening] = useState(false),
@@ -160,15 +158,14 @@ export default function Voice({
             <h2>Talk to your workspace.</h2>
             <p>
               Your browser may send audio to its speech recognition provider.
-              {workspace
-                ? "Kineframe receives the transcript and, if hosted AI is configured, sends it with the demo source, evidence, conversation and saved preferences to the AI service."
-                : "Mindscope receives the transcript and, if hosted AI is configured, sends that text and the circuit state to the AI service."}{" "}
-              No audio is saved by this app.
+              Kineframe receives the transcript and, if hosted AI is configured,
+              sends it with the demo source, evidence, conversation and saved
+              preferences to the AI service. No audio is saved by this app.
             </p>
             <p>
-              {workspace
-                ? "Speak one question at a time. You can interrupt the agent and redirect it. Source changes wait for your review. Enable voice here before entering VR."
-                : "Speak a question or describe an experiment. Proposed changes always wait for you to run them."}
+              Speak one question at a time. You can interrupt the agent and
+              redirect it. Source changes wait for your review. Enable voice
+              here before entering VR.
             </p>
             <button
               type="button"

@@ -1521,3 +1521,27 @@
   font-size: 9px;
   color: #95acc4;
 }
+
+/* Voice permission UI belongs to the engineering workspace. */
+.kf-app .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #070d18bb;
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+.kf-app .modal {
+  position: relative;
+  width: min(100%, 480px);
+  border-radius: 14px;
+  padding: 36px;
+  max-height: 90vh;
+  overflow: auto;
+}
+.kf-app .modal .button {
+  padding: 12px 16px;
+  border-radius: 7px;
+}

@@ -32,7 +32,7 @@ import type { Focus, Scenario, Workspace } from "../../shared/workspace";
 import { services } from "../../shared/workspace";
 import ServiceMap from "./ServiceMap";
 import SpatialRoom from "./SpatialRoom";
-import Voice from "../sandbox/Voice";
+import Voice from "./Voice";
 import "./workspace.css";
 type Panel = "evidence" | "source" | "patch" | "memory";
 const memoryKey = "kineframe:memory:v1";
@@ -248,7 +248,7 @@ export default function WorkspaceApp() {
   return (
     <div className="kf-app">
       <header className="kf-top">
-        <a className="kf-brand" href="/">
+        <a className="kf-brand" href="/" aria-label="Kineframe product home">
           <span className="kf-brand-mark">
             <Box size={23} />
           </span>
@@ -901,7 +901,6 @@ export default function WorkspaceApp() {
               />
               <div>
                 <Voice
-                  workspace
                   triggerRef={voice}
                   onQuestion={(q) => void send(q)}
                   onStatus={setNotice}

@@ -1,6 +1,7 @@
 # Hosted Kineframe
 
-- Workspace: https://kineframe.onrender.com
+- Product website: https://kineframe.onrender.com
+- Workspace: https://kineframe.onrender.com/workspace
 - Illustrated two-page brief: https://kineframe.onrender.com/api/brief
 - Repository: https://github.com/aravinds-kannappan/Kineframe
 - Render service: `srv-dbm9sprbc2fs738ni8e0`

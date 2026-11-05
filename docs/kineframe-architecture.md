@@ -1,6 +1,6 @@
 # Kineframe implementation
 
-The root route serves the developer workspace. `src/workspace/WorkspaceApp.tsx` owns the session UI; `ServiceMap.tsx` provides accessible SVG selection and arrangement; `SpatialRoom.tsx` renders the same authoritative state in Three.js/WebXR. Desktop and XR operate on the same session rather than independent simulations. Node positions are view-local arrangements, while focus, evidence, source, proposals and conversation are session state.
+The root route serves the interactive product landing page. `ScrollStory.tsx` uses scroll position to animate three chapters, with direct chapter controls and a static fallback for reduced-motion or short viewports. `/workspace` serves the developer environment and is lazy-loaded so the landing page does not download Three.js or create a session. `src/workspace/WorkspaceApp.tsx` owns the session UI; `ServiceMap.tsx` provides accessible SVG selection and arrangement; `SpatialRoom.tsx` renders the same authoritative state in Three.js/WebXR. Desktop and XR operate on the same session rather than independent simulations. Node positions are view-local arrangements, while focus, evidence, source, proposals and conversation are session state.
 
 ## State and execution
 

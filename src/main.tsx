@@ -1,21 +1,29 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App";
-import WorkspaceApp from "./workspace/WorkspaceApp";
-import Experience from "./Experience";
-import CircuitSandbox from "./sandbox/CircuitSandbox";
+import LandingPage from "./landing/LandingPage";
 import "./styles.css";
+const WorkspaceApp = lazy(() => import("./workspace/WorkspaceApp"));
+const path = location.pathname.replace(/\/+$/, "") || "/";
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {location.pathname.startsWith("/lab") ||
-    new URLSearchParams(location.search).has("room") ? (
-      <App />
-    ) : location.pathname.startsWith("/experience") ? (
-      <Experience />
-    ) : location.pathname.startsWith("/sandbox") ? (
-      <CircuitSandbox />
+    {path === "/" ? (
+      <LandingPage />
+    ) : path === "/workspace" ? (
+      <Suspense
+        fallback={
+          <div className="route-loading" role="status">
+            Opening your workspace…
+          </div>
+        }
+      >
+        <WorkspaceApp />
+      </Suspense>
     ) : (
-      <WorkspaceApp />
+      <div className="route-loading">
+        <h1>Nothing in this frame.</h1>
+        <p>This page is no longer available.</p>
+        <a href="/">Back to Kineframe →</a>
+      </div>
     )}
   </React.StrictMode>,
 );

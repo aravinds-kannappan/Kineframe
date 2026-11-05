@@ -1,4 +1,4 @@
-name: Verify Mindscope
+name: Verify Kineframe
 on: [push, pull_request]
 jobs:
   verify:

@@ -46,6 +46,32 @@ test(
           reject(new Error("Server failed"));
         });
       });
+      const health = await (await fetch(origin + "/api/health")).json();
+      assert.deepEqual(health, { ok: true, agent: "guided" });
+      for (const route of ["/", "/workspace", "/workspace/"]) {
+        const response = await fetch(origin + route);
+        assert.equal(response.status, 200, route);
+        assert.match(response.headers.get("content-type")!, /text\/html/);
+      }
+      for (const route of [
+        "/lab",
+        "/sandbox",
+        "/experience",
+        "/unknown-page",
+      ]) {
+        assert.equal((await fetch(origin + route)).status, 404, route);
+      }
+      for (const route of [
+        "/api/rooms",
+        "/api/tutor",
+        "/api/circuit-assistant",
+      ]) {
+        const response = await fetch(origin + route, { method: "POST" });
+        assert.equal(response.status, 404, route);
+        assert.deepEqual(await response.json(), {
+          error: "Endpoint not found",
+        });
+      }
       const rejected = await fetch(origin + "/api/workspace/sessions", {
         method: "POST",
         headers: {
